@@ -1,0 +1,307 @@
+(function() {
+    document.addEventListener('DOMContentLoaded', () => {
+        // DOM Elements
+        const inventoryDateEl = document.getElementById('inventoryDate');
+        const warehouseIdEl = document.getElementById('warehouseId');
+
+        // Set default values
+        inventoryDateEl.value = '2025-09-25';
+        warehouseIdEl.value = 'AH400';
+        const checkDateAndWarehouseBtn = document.getElementById('checkDateAndWarehouse');
+        const querySection = document.getElementById('query-section');
+        const dataSection = document.getElementById('data-section');
+        const actionSection = document.getElementById('action-section');
+        const queryBtn = document.getElementById('queryBtn');
+        const confirmBtn = document.getElementById('confirmBtn');
+        const inventoryTableBody = document.querySelector('#inventoryTable tbody');
+        const messageArea = document.getElementById('messageArea');
+        let messageTimeout; // Variable to hold the timeout
+        const scannerContainer = document.getElementById('scanner-container');
+        const closeScannerBtn = document.getElementById('close-scanner');
+        let html5QrCode;
+
+        // --- Mock Data ---
+        const mockWarehouses = ['W01', 'W02', 'W03', 'AH400'];
+        const mockInventoryData = [
+            { cInvSNo: 'S001', cPartsIdn: 'PART-A1', cCName: '零件A', cBin: 'A01', nQtyAvailable: 100, nActualInvQty: null },
+            { cInvSNo: 'S002', cPartsIdn: 'PART-B2', cCName: '零件B', cBin: 'A02', nQtyAvailable: 50, nActualInvQty: null },
+            { cInvSNo: 'S003', cPartsIdn: 'PART-C3', cCName: '零件C', cBin: 'B01', nQtyAvailable: 200, nActualInvQty: null },
+            { cInvSNo: 'S004', cPartsIdn: 'PART-D4', cCName: '零件D', cBin: 'B02', nQtyAvailable: 20, nActualInvQty: null },
+            { cInvSNo: 'S005', cPartsIdn: 'PART-A1', cCName: '零件A', cBin: 'C01', nQtyAvailable: 30, nActualInvQty: null },
+        ];
+
+        // --- API Simulation ---
+        const api = {
+            checkWarehouse: async (warehouseId) => {
+                console.log(`Checking warehouse: ${warehouseId}`);
+                await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
+                return warehouseId && mockWarehouses.includes(warehouseId.toUpperCase());
+            },
+            fetchInventoryData: async (queryParams) => {
+                console.log('Fetching inventory data with params:', queryParams);
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
+                
+                let filteredData = mockInventoryData;
+
+                if (queryParams.cBinBegin && queryParams.cBinEnd) {
+                    filteredData = filteredData.filter(item => item.cBin >= queryParams.cBinBegin.toUpperCase() && item.cBin <= queryParams.cBinEnd.toUpperCase());
+                }
+                if (queryParams.cInvNoBegin && queryParams.cInvNoEnd) {
+                     filteredData = filteredData.filter(item => item.cInvSNo >= queryParams.cInvNoBegin.toUpperCase() && item.cInvSNo <= queryParams.cInvNoEnd.toUpperCase());
+                }
+                if (queryParams.cPartsIdn) {
+                    const partsIdn = queryParams.cPartsIdn.split(' ')[0].toUpperCase();
+                    filteredData = filteredData.filter(item => item.cPartsIdn === partsIdn);
+                }
+                
+                return filteredData;
+            },
+            submitInventory: async (data) => {
+                console.log('Submitting inventory data:', data);
+                await new Promise(resolve => setTimeout(resolve, 800)); // Simulate network delay
+                if (data.inventoryData && data.inventoryData.length > 0) {
+                    return { status: true, message: '紀錄完成' };
+                }
+                return { status: false, message: '提交失敗，無有效數據' };
+            }
+        };
+
+        // --- Event Listeners ---
+        checkDateAndWarehouseBtn.addEventListener('click', handleCheckDateAndWarehouse);
+        queryBtn.addEventListener('click', handleQuery);
+        confirmBtn.addEventListener('click', handleConfirm);
+        document.getElementById('scanBarcode').addEventListener('click', () => handleScanBarcode('partsIdn'));
+        document.getElementById('scanBinBegin').addEventListener('click', () => handleScanBarcode('binBegin'));
+        document.getElementById('scanBinEnd').addEventListener('click', () => handleScanBarcode('binEnd'));
+        closeScannerBtn.addEventListener('click', stopScan);
+
+
+        // --- Functions ---
+        async function handleCheckDateAndWarehouse() {
+            console.log('handleCheckDateAndWarehouse triggered');
+            const date = inventoryDateEl.value;
+            const warehouseId = warehouseIdEl.value;
+
+            if (!date || !warehouseId) {
+                showMessage('error', '請填寫盤點日期和盤點庫位');
+                return;
+            }
+
+            console.log('Inputs are valid, proceeding with API call');
+            checkDateAndWarehouseBtn.textContent = '檢查中...';
+            checkDateAndWarehouseBtn.disabled = true;
+
+            const isValid = await api.checkWarehouse(warehouseId);
+            console.log('API check result:', isValid);
+
+            if (isValid) {
+                console.log('Warehouse is valid, updating UI');
+                inventoryDateEl.disabled = true;
+                warehouseIdEl.disabled = true;
+                checkDateAndWarehouseBtn.style.display = 'none';
+                checkDateAndWarehouseBtn.disabled = true;
+                querySection.classList.remove('hidden');
+                showMessage('success', '日期與庫位驗證成功！');
+                return;
+            } else {
+                console.log('Warehouse is invalid, showing error');
+                showMessage('error', '盤點庫位不正確或不存在');
+                checkDateAndWarehouseBtn.textContent = '檢查庫存';
+                checkDateAndWarehouseBtn.disabled = false;
+            }
+        }
+
+        async function handleQuery() {
+            const queryParams = {
+                cBinBegin: document.getElementById('binBegin').value,
+                cBinEnd: document.getElementById('binEnd').value,
+                cInvNoBegin: document.getElementById('invNoBegin').value,
+                cInvNoEnd: document.getElementById('invNoEnd').value,
+                cPartsIdn: document.getElementById('partsIdn').value,
+            };
+
+            // Basic validation to ensure at least one query method is used
+            const hasQueryParams = Object.values(queryParams).some(val => val !== '');
+            if (!hasQueryParams) {
+                showMessage('error', '請至少提供一組查詢條件');
+                return;
+            }
+
+            queryBtn.textContent = '查詢中...';
+            queryBtn.disabled = true;
+            
+            const data = await api.fetchInventoryData(queryParams);
+            
+            if (data && data.length > 0) {
+                populateTable(data);
+                dataSection.classList.remove('hidden');
+                actionSection.classList.remove('hidden');
+                showMessage('success', `查詢到 ${data.length} 筆資料`);
+            } else {
+                inventoryTableBody.innerHTML = '';
+                dataSection.classList.add('hidden');
+                actionSection.classList.add('hidden');
+                showMessage('info', '查無資料');
+            }
+
+            queryBtn.textContent = '查詢';
+            queryBtn.disabled = false;
+        }
+
+        function populateTable(data) {
+            inventoryTableBody.innerHTML = ''; // Clear existing data
+            data.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td data-label="盤點編號">${item.cInvSNo}</td>
+                    <td data-label="零件件號">${item.cPartsIdn}</td>
+                    <td data-label="品名">${item.cCName}</td>
+                    <td data-label="月結堪用量">${item.nQtyAvailable}</td>
+                    <td data-label="本次盤點數"><input type="number" class="actual-qty" data-inv-sno="${item.cInvSNo}" value="" min="0"></td>
+                `;
+                inventoryTableBody.appendChild(row);
+            });
+        }
+
+        async function handleConfirm() {
+            if (!confirm('若無輸入盤點數，將以月結堪用量替代。確定要提交嗎？')) {
+                return;
+            }
+
+            confirmBtn.textContent = '提交中...';
+            confirmBtn.disabled = true;
+
+            const rows = inventoryTableBody.querySelectorAll('tr');
+            const inventoryData = [];
+            let dataIsValid = true;
+
+            rows.forEach(row => {
+                const invSNo = row.querySelector('.actual-qty').dataset.invSno;
+                const actualQtyEl = row.querySelector('.actual-qty');
+                let actualQty = actualQtyEl.value;
+                const availableQty = row.cells[3].textContent;
+
+                if (actualQty === '' || actualQty === null) {
+                    actualQty = availableQty;
+                }
+                
+                const nActualInvQty = parseInt(actualQty, 10);
+                if (isNaN(nActualInvQty)) {
+                    showMessage('error', `盤點編號 ${invSNo} 的盤點數無效`);
+                    dataIsValid = false;
+                    return;
+                }
+
+                inventoryData.push({
+                    cInvSNo: invSNo,
+                    nActualInvQty: nActualInvQty,
+                });
+            });
+
+            if (!dataIsValid) {
+                confirmBtn.textContent = '確認';
+                confirmBtn.disabled = false;
+                return;
+            }
+            
+            const submissionData = {
+                dInventoryDate: inventoryDateEl.value,
+                cWhIdn: warehouseIdEl.value,
+                inventoryData: inventoryData
+            };
+
+            const result = await api.submitInventory(submissionData);
+
+            if (result.status) {
+                showMessage('success', result.message);
+                resetScreen();
+            } else {
+                showMessage('error', result.message);
+            }
+
+            confirmBtn.textContent = '確認';
+            confirmBtn.disabled = false;
+        }
+        
+        function showMessage(type, text) {
+            clearTimeout(messageTimeout); // Clear any existing timeout
+            messageArea.textContent = text;
+            messageArea.className = `message ${type}`; // 'success', 'error', or 'info'
+            
+            messageTimeout = setTimeout(() => {
+                messageArea.className = 'message';
+            }, 3000);
+        }
+        
+        function resetScreen() {
+            inventoryTableBody.innerHTML = '';
+            dataSection.classList.add('hidden');
+            actionSection.classList.add('hidden');
+            
+            // Clear query fields
+            document.getElementById('binBegin').value = '';
+            document.getElementById('binEnd').value = '';
+            document.getElementById('invNoBegin').value = '';
+            document.getElementById('invNoEnd').value = '';
+            document.getElementById('partsIdn').value = '';
+        }
+
+        function handleScanBarcode(targetInputId) {
+            scannerContainer.classList.remove('hidden');
+            
+            // Lazy-load the scanner
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("reader");
+            }
+
+            const qrCodeSuccessCallback = (decodedText, decodedResult) => {
+                console.log(`Code matched = ${decodedText}`, decodedResult);
+                
+                if (targetInputId === 'partsIdn') {
+                    // Clear other query fields
+                    document.getElementById('binBegin').value = '';
+                    document.getElementById('binEnd').value = '';
+                    document.getElementById('invNoBegin').value = '';
+                    document.getElementById('invNoEnd').value = '';
+                }
+                
+                const targetEl = document.getElementById(targetInputId);
+                targetEl.value = decodedText.toUpperCase(); // Convert to uppercase
+                
+                stopScan();
+
+                // Automatically trigger query for partsIdn
+                if (targetInputId === 'partsIdn') {
+                    handleQuery();
+                }
+            };
+
+            const config = {
+                fps: 10,
+                qrbox: { width: 250, height: 250 },
+                experimentalFeatures: {
+                    useBarCodeDetectorIfSupported: false
+                }
+            };
+
+            // Start scanning
+            html5QrCode.start({ facingMode: "environment" }, config, qrCodeSuccessCallback)
+                .catch(err => {
+                    console.error("Unable to start scanning.", err);
+                    showMessage('error', '無法啟動相機，請確認授權。');
+                    stopScan();
+                });
+        }
+
+        function stopScan() {
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().then(() => {
+                    console.log("QR Code scanning stopped.");
+                }).catch(err => {
+                    console.error("Failed to stop scanning.", err);
+                });
+            }
+            scannerContainer.classList.add('hidden');
+        }
+    });
+})();

@@ -1,0 +1,330 @@
+:root {
+    --primary-color: #4CAF50;
+    --secondary-color: #f44336;
+    --background-color: #f4f4f9;
+    --card-background: #ffffff;
+    --text-color: #333;
+    --border-color: #ddd;
+    --shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+    margin: 0;
+    padding: 20px;
+    font-size: 14px;
+}
+
+.container {
+    margin: auto;
+    padding: 20px;
+}
+
+h1, h2 {
+    color: var(--primary-color);
+    text-align: center;
+}
+
+.card {
+    background: var(--card-background);
+    padding: 10px;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow);
+}
+
+.info-group {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.query-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.query-option h3 {
+    flex-shrink: 0; /* 防止標題被壓縮 */
+    margin-right: 15px; /* 在標題和輸入框之間增加一些間距 */
+}
+
+
+.query-option:first-child {
+    border-top: none;
+    padding-top: 0;
+    margin-top: 0;
+}
+
+button {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    width: 100%;
+    margin-top: 10px;
+}
+
+button:hover {
+    opacity: 0.9;
+}
+
+#checkDateAndWarehouse {
+    background-color: #2196F3;
+}
+
+#scanBarcode, .scan-btn {
+    background-color: #ff9800;
+    margin-top: 0; /* Align with input box */
+    width: auto;
+    white-space: nowrap;
+    padding: 10px 20px;
+    font-size: 1em; /* Match input font size */
+    border-radius: 4px; /* Match input border-radius */
+    box-sizing: border-box;
+}
+
+#confirmBtn {
+    background-color: #2196F3; /* Blue color for confirmation */
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th, td {
+    text-align: left;
+    padding: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+th {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+tr:hover {
+    background-color: #f1f1f1;
+}
+
+td input[type="number"] {
+    width: 80px;
+    padding: 5px;
+}
+
+.message {
+    text-align: center;
+    padding: 10px;
+    margin-top: 20px;
+    border-radius: 4px;
+    display: none; /* Initially hidden */
+}
+
+.message.success {
+    background-color: #d4edda;
+    color: #155724;
+    display: block;
+}
+
+.message.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    display: block;
+}
+
+.message.info {
+    background-color: #e2f3fe;
+    color: #31708f;
+    display: block;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+input:disabled {
+    background-color: #eee;
+    cursor: not-allowed;
+}
+
+
+/* Responsive Design */
+
+@media (max-width: 768px) {
+    .query-option {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+}
+
+@media (max-width: 600px) {
+    body {
+        padding: 10px;
+        -webkit-text-size-adjust: 100%; /* Prevent iOS font scaling */
+    }
+
+    .container {
+        padding: 0;
+    }
+
+    .card {
+        padding: 15px;
+    }
+    
+
+    button {
+        padding: 15px;
+        font-size: 18px;
+    }
+
+    /* Responsive table styles */
+    .table-container {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    table {
+        border: 0;
+    }
+
+    table thead {
+        display: none;
+    }
+
+    table tr {
+        display: block;
+        margin-bottom: .625em;
+        border-bottom: 3px solid var(--primary-color);
+    }
+    
+    table td {
+        display: block;
+        text-align: right;
+        font-size: 15px;
+        border-bottom: 1px dotted var(--border-color);
+    }
+
+    table td::before {
+        content: attr(data-label);
+        float: left;
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+
+    table td:last-child {
+        border-bottom: 0;
+    }
+    
+    td input[type="number"] {
+        width: 100px;
+        padding: 8px;
+        font-size: 16px;
+    }
+}
+/* New styles for .my_field */
+.my_field {
+    width:100%;
+}
+
+.my_field span:first-child {
+    font-weight: bold;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.my_field span:last-child {
+    display: inline-flex; /* Use flex for inner alignment */
+    width: calc(100% - 90px); /* Adjust for gap */
+    vertical-align: middle;
+}
+
+.my_field span:last-child input {
+    flex-grow: 1; /* Allow input to take available space */
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.my_field input[type="text"],
+.my_field input[type="date"] {
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.my_field button {
+    margin-top: 0;
+    width: auto;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+/* Adjustments for responsive */
+@media (max-width: 600px) {
+    .my_field span:first-child,
+    .my_field span:last-child {
+        display: block;
+        width: 100%;
+    }
+
+    .my_field span:first-child {
+        margin-bottom: 5px;
+    }
+}
+#scanner-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    /* display: flex; REMOVED to be controlled by a class */
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+
+#reader {
+    width: 90%;
+    max-width: 500px;
+    background: white;
+    border: 10px solid white;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+#close-scanner {
+    margin-top: 20px;
+    width: auto;
+    padding: 10px 30px;
+    background-color: var(--secondary-color);
+}
