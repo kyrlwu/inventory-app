@@ -110,7 +110,7 @@ table {
 
 th, td {
     text-align: left;
-    padding: 12px;
+    padding: 2px 5px; /* 減少垂直 padding */
     border-bottom: 1px solid var(--border-color);
 }
 
@@ -202,7 +202,7 @@ input:disabled {
     
 
     button {
-        padding: 15px;
+        padding: 8px;
         font-size: 18px;
     }
 
@@ -247,10 +247,19 @@ input:disabled {
     
     td input[type="number"] {
         width: 100px;
-        padding: 8px;
+        /* padding: 8px; */
         font-size: 16px;
+        text-align: right;
+        color: #2196F3;
     }
 }
+
+/* Style for the "Current Count" cell */
+td[data-label="本次盤點數"] {
+    color: blue;
+    text-align: right;
+}
+
 /* New styles for .my_field */
 .my_field {
     width:100%;

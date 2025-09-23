@@ -227,70 +227,75 @@
                     <td data-label="零件件號">${item.cPartsIdn}</td>
                     <td data-label="品名">${item.cCName}</td>
                     <td data-label="月結堪用量">${item.nQtyAvailable}</td>
-                    <td data-label="本次盤點數"><input type="number" class="actual-qty" data-inv-sno="${item.cInvSNo}" value="" min="0"></td>
+                    <td data-label="本次盤點數"><input type="number" class="actual-qty" data-inv-sno="${item.cInvSNo}" data-origin-qty="${item.nActualInvQty || ''}" value="" min="0"></td>
                 `;
                 inventoryTableBody.appendChild(row);
             });
         }
 
         async function handleConfirm() {
-            if (!confirm('若無輸入盤點數，將以月結堪用量替代。確定要提交嗎？')) {
-                return;
+            // 1. 增加確認對話框
+            if (!confirm('若無輸入盤點數，將以「月結堪用量」替代。確定要提交嗎？')) {
+                return; // 如果用戶取消，則終止
             }
 
             confirmBtn.textContent = '提交中...';
             confirmBtn.disabled = true;
 
             const rows = inventoryTableBody.querySelectorAll('tr');
-            const inventoryData = [];
-            let dataIsValid = true;
+            const inventoryData = []; // 用於存放待上傳的數據
 
             rows.forEach(row => {
-                const invSNo = row.querySelector('.actual-qty').dataset.invSno;
                 const actualQtyEl = row.querySelector('.actual-qty');
-                let actualQty = actualQtyEl.value;
-                const availableQty = row.cells[3].textContent;
+                const userInputQty = actualQtyEl.value;
 
-                if (actualQty === '' || actualQty === null) {
-                    actualQty = availableQty;
-                }
-                
-                const nActualInvQty = parseInt(actualQty, 10);
-                if (isNaN(nActualInvQty)) {
-                    showMessage('error', `盤點編號 ${invSNo} 的盤點數無效`);
-                    dataIsValid = false;
-                    return;
-                }
+                // 2. 只處理使用者手動輸入了數值的項目
+                if (userInputQty !== '' && userInputQty !== null) {
+                    const invSNo = actualQtyEl.dataset.invSno;
+                    const originQty = actualQtyEl.dataset.originQty; // 原始盤點數
+                    const newQty = parseInt(userInputQty, 10);
 
-                inventoryData.push({
-                    cInvSNo: invSNo,
-                    nActualInvQty: nActualInvQty,
-                });
+                    // 檢查轉換後的數字是否有效
+                    if (isNaN(newQty)) {
+                        // 雖然 input type="number" 會做基本防禦，但還是加上以防萬一
+                        console.warn(`盤點編號 ${invSNo} 的輸入值 "${userInputQty}" 不是一個有效的數字，已忽略。`);
+                        return; // 繼續處理下一行
+                    }
+
+                    // 3. 只有當新盤點數與原始值不同時，才加入待上傳陣列
+                    if (String(newQty) !== String(originQty)) {
+                        inventoryData.push({
+                            cInvSNo: invSNo,
+                            cPartsIdn: row.cells[1].textContent.trim(),
+                            nActualInvQty: newQty,
+                        });
+                    }
+                }
+                // 如果 userInputQty 是空的，則不做任何事
             });
 
-            if (!dataIsValid) {
-                confirmBtn.textContent = '確認';
-                confirmBtn.disabled = false;
-                return;
-            }
-            
-            const submissionData = {
-                dInventoryDate: inventoryDateEl.value,
-                cWhIdn: warehouseIdEl.value,
-                inventoryData: inventoryData
-            };
+            // 4. 打印調試信息並暫停實際的上傳操作
+            console.log('待上傳的數據:', inventoryData);
 
-            const result = await api.submitInventory(submissionData);
+            // const submissionData = {
+            //     dInventoryDate: inventoryDateEl.value,
+            //     cWhIdn: warehouseIdEl.value,
+            //     inventoryData: inventoryData
+            // };
+            //
+            // const result = await api.submitInventory(submissionData);
+            //
+            // if (result.status) {
+            //     showMessage('success', result.message);
+            //     resetScreen();
+            // } else {
+            //     showMessage('error', result.message);
+            // }
 
-            if (result.status) {
-                showMessage('success', result.message);
-                resetScreen();
-            } else {
-                showMessage('error', result.message);
-            }
-
-            confirmBtn.textContent = '確認';
-            confirmBtn.disabled = false;
+            // 暫時直接顯示成功，因為我們跳過了上傳
+            // showMessage('info', '數據已在控制台打印，未執行上傳。');
+            // confirmBtn.textContent = '確認';
+            // confirmBtn.disabled = false;
         }
         
         function showMessage(type, text) {
