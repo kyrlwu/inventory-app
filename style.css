@@ -40,6 +40,7 @@ h1, h2 {
     gap: 15px;
     align-items: center;
     justify-content: space-between;
+    margin-bottom: 15px;
 }
 
 .query-option {
@@ -51,6 +52,8 @@ h1, h2 {
 .query-option h3 {
     flex-shrink: 0; /* 防止標題被壓縮 */
     margin-right: 15px; /* 在標題和輸入框之間增加一些間距 */
+    margin-block-start: 0.5em;
+    margin-block-end: 0.5em;
 }
 
 
@@ -76,7 +79,7 @@ button:hover {
     opacity: 0.9;
 }
 
-#checkDateAndWarehouse {
+#checkDateAndWarehouse, #queryBtn {
     background-color: #2196F3;
 }
 
@@ -254,7 +257,7 @@ input:disabled {
 }
 
 .my_field span:first-child {
-    font-weight: bold;
+    /* font-weight: bold; */
     display: inline-block;
     vertical-align: middle;
 }
@@ -263,6 +266,7 @@ input:disabled {
     display: inline-flex; /* Use flex for inner alignment */
     width: calc(100% - 90px); /* Adjust for gap */
     vertical-align: middle;
+    justify-content: flex-end; /* Align button to the right */
 }
 
 .my_field span:last-child input {
@@ -282,8 +286,8 @@ input:disabled {
 .my_field button {
     margin-top: 0;
     width: auto;
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
+    /* border-top-left-radius: 0; */
+    /* border-bottom-left-radius: 0; */
 }
 
 /* Adjustments for responsive */
@@ -327,4 +331,87 @@ input:disabled {
     width: auto;
     padding: 10px 30px;
     background-color: var(--secondary-color);
+}
+
+#dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+#dialog-box {
+    background: white;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    width: 80%;
+    max-width: 400px;
+    border-top: 5px solid #ccc; /* Default border */
+    display: flex;
+    flex-direction: column;
+}
+
+#dialog-box div {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+#dialog-box.success {
+    border-top-color: var(--primary-color);
+}
+
+#dialog-box.error {
+    border-top-color: var(--secondary-color);
+}
+
+#dialog-box.info {
+    border-top-color: #2196F3; /* Blue for info */
+}
+
+#dialog-message {
+    text-align: left;
+    font-size: 16px; /* Increase font size */
+}
+
+#dialog-close {
+    width: auto;
+    padding: 10px 20px;
+    background-color: var(--primary-color); /* Default color */
+    color: white;
+}
+
+#dialog-box.success #dialog-close {
+    background-color: var(--primary-color);
+}
+
+#dialog-box.error #dialog-close {
+    background-color: var(--secondary-color);
+}
+
+#dialog-box.info #dialog-close {
+    background-color: #2196F3; /* Blue for info */
+}
+.query-type-selector {
+    display: flex;
+    margin-bottom: 15px;
+    flex-wrap: wrap; /* 在小螢幕上換行 */
+}
+
+.query-type-selector label {
+    margin-right: 15px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+}
+
+.query-type-selector input[type="radio"] {
+    margin-right: 5px;
 }

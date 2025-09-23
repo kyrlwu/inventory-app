@@ -31,8 +31,13 @@
         
 
             <div id="query-section" class="hidden">
-                <div class="query-option">
-                    <h3>依料架位</h3>
+                <div class="query-type-selector">
+                    <label><input type="radio" name="queryType" value="byBin" checked> 依料架位</label>
+                    <label><input type="radio" name="queryType" value="byInvNo"> 依盤點編號</label>
+                    <label><input type="radio" name="queryType" value="byPartNo"> 依零件件號</label>
+                </div>
+
+                <div class="query-option" data-query-type="byBin">
                     <div class="my_field">
                         <span>起</span>
                         <span><input type="text" id="binBegin" placeholder="起始料架"><button type="button" id="scanBinBegin" class="scan-btn">掃描</button></span>
@@ -42,8 +47,7 @@
                         <span><input type="text" id="binEnd" placeholder="結束料架"><button type="button" id="scanBinEnd" class="scan-btn">掃描</button></span>
                     </div>
                 </div>
-                <div class="query-option">
-                    <h3>依盤點編號</h3>
+                <div class="query-option hidden" data-query-type="byInvNo">
                     <div class="my_field">
                         <span>起</span>
                         <span><input type="text" id="invNoBegin" placeholder="起始編號"></span>
@@ -53,8 +57,7 @@
                         <span><input type="text" id="invNoEnd" placeholder="結束編號"></span>
                     </div>
                 </div>
-                <div class="query-option">
-                    <h3>依零件件號</h3>
+                <div class="query-option hidden" data-query-type="byPartNo">
                     <div class="my_field">
                         <span><input type="text" id="partsIdn" placeholder="輸入或掃描零件件號"><button type="button" id="scanBarcode">掃描</button></span>
                     </div>
@@ -87,6 +90,13 @@
         </div>
 
         <div id="messageArea" class="message"></div>
+    </div>
+
+    <div id="dialog-overlay" class="hidden">
+        <div id="dialog-box">
+            <p id="dialog-message"></p>
+            <div><button id="dialog-close">關閉</button></div>
+        </div>
     </div>
 
     <script src="script.js"></script>

@@ -20,6 +20,10 @@
         const closeScannerBtn = document.getElementById('close-scanner');
         let html5QrCode;
 
+        const dialogOverlay = document.getElementById('dialog-overlay');
+        const dialogMessage = document.getElementById('dialog-message');
+        const dialogCloseBtn = document.getElementById('dialog-close');
+
         // --- Mock Data ---
         const mockWarehouses = ['W01', 'W02', 'W03', 'AH400'];
         const mockInventoryData = [
@@ -75,8 +79,46 @@
         document.getElementById('scanBinEnd').addEventListener('click', () => handleScanBarcode('binEnd'));
         closeScannerBtn.addEventListener('click', stopScan);
 
+        document.querySelectorAll('input[name="queryType"]').forEach(radio => {
+            radio.addEventListener('change', handleQueryTypeChange);
+        });
+
+        // --- Auto-uppercase ---
+        ['warehouseId', 'binBegin', 'binEnd', 'invNoBegin', 'invNoEnd', 'partsIdn'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('input', () => {
+                    el.value = el.value.toUpperCase();
+                });
+            }
+        });
 
         // --- Functions ---
+
+        function handleQueryTypeChange(event) {
+            const selectedType = event.target.value;
+            const queryOptions = document.querySelectorAll('.query-option');
+
+            queryOptions.forEach(option => {
+                const optionType = option.dataset.queryType;
+                const inputs = option.querySelectorAll('input');
+
+                if (optionType === selectedType) {
+                    option.classList.remove('hidden');
+                    inputs.forEach(input => input.disabled = false);
+                } else {
+                    option.classList.add('hidden');
+                    inputs.forEach(input => {
+                        input.disabled = true;
+                        input.value = ''; // Clear value when hiding
+                    });
+                }
+            });
+        }
+        dialogCloseBtn.addEventListener('click', () => {
+            dialogOverlay.classList.add('hidden');
+        });
+
         async function handleCheckDateAndWarehouse() {
             console.log('handleCheckDateAndWarehouse triggered');
             const date = inventoryDateEl.value;
@@ -112,13 +154,18 @@
         }
 
         async function handleQuery() {
-            const queryParams = {
-                cBinBegin: document.getElementById('binBegin').value,
-                cBinEnd: document.getElementById('binEnd').value,
-                cInvNoBegin: document.getElementById('invNoBegin').value,
-                cInvNoEnd: document.getElementById('invNoEnd').value,
-                cPartsIdn: document.getElementById('partsIdn').value,
-            };
+            const selectedQueryType = document.querySelector('input[name="queryType"]:checked').value;
+            const queryParams = {};
+
+            if (selectedQueryType === 'byBin') {
+                queryParams.cBinBegin = document.getElementById('binBegin').value;
+                queryParams.cBinEnd = document.getElementById('binEnd').value;
+            } else if (selectedQueryType === 'byInvNo') {
+                queryParams.cInvNoBegin = document.getElementById('invNoBegin').value;
+                queryParams.cInvNoEnd = document.getElementById('invNoEnd').value;
+            } else if (selectedQueryType === 'byPartNo') {
+                queryParams.cPartsIdn = document.getElementById('partsIdn').value;
+            }
 
             // Basic validation to ensure at least one query method is used
             const hasQueryParams = Object.values(queryParams).some(val => val !== '');
@@ -224,13 +271,21 @@
         }
         
         function showMessage(type, text) {
-            clearTimeout(messageTimeout); // Clear any existing timeout
-            messageArea.textContent = text;
-            messageArea.className = `message ${type}`; // 'success', 'error', or 'info'
+            const dialogBox = document.getElementById('dialog-box');
             
-            messageTimeout = setTimeout(() => {
-                messageArea.className = 'message';
-            }, 3000);
+            dialogMessage.textContent = text;
+            dialogBox.className = `message ${type}`; // Apply class for color
+            dialogOverlay.classList.remove('hidden');
+            dialogCloseBtn.className = `message ${type}`; // Apply class for color
+
+            clearTimeout(messageTimeout); // Clear any existing timeout
+
+            if (type === 'success' || type === 'info') {
+                messageTimeout = setTimeout(() => {
+                    dialogOverlay.classList.add('hidden');
+                }, 2000);
+            }
+            // For 'error', no timeout is set, so it requires manual closing.
         }
         
         function resetScreen() {
