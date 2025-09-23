@@ -172,9 +172,17 @@
             if (selectedQueryType === 'byBin') {
                 queryParams.cBinBegin = document.getElementById('binBegin').value;
                 queryParams.cBinEnd = document.getElementById('binEnd').value;
+                if (!queryParams.cBinBegin || !queryParams.cBinEnd) {
+                    showMessage('error', '請輸入完整的查詢條件');
+                    return;
+                }
             } else if (selectedQueryType === 'byInvNo') {
                 queryParams.cInvNoBegin = document.getElementById('invNoBegin').value;
                 queryParams.cInvNoEnd = document.getElementById('invNoEnd').value;
+                if (!queryParams.cInvNoBegin || !queryParams.cInvNoEnd) {
+                    showMessage('error', '請輸入完整的查詢條件');
+                    return;
+                }
             } else if (selectedQueryType === 'byPartNo') {
                 const rawPartNo = document.getElementById('partsIdn').value;
                 queryParams.cPartsIdn = formatBarcode(rawPartNo);
