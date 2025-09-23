@@ -34,6 +34,18 @@
             { cInvSNo: 'S005', cPartsIdn: 'PART-A1', cCName: '零件A', cBin: 'C01', nQtyAvailable: 30, nActualInvQty: null },
         ];
 
+        function formatBarcode(barcode) {
+            if (!barcode) {
+                return '';
+            }
+            // 1. 移除第一個空格之後的所有內容
+            let cleanedBarcode = barcode.split(' ')[0];
+            // 2. 移除所有連字號
+            cleanedBarcode = cleanedBarcode.replace(/-/g, '');
+            // 3. 轉換為大寫
+            return cleanedBarcode.toUpperCase();
+        }
+
         // --- API Simulation ---
         const api = {
             checkWarehouse: async (warehouseId) => {
@@ -54,8 +66,8 @@
                      filteredData = filteredData.filter(item => item.cInvSNo >= queryParams.cInvNoBegin.toUpperCase() && item.cInvSNo <= queryParams.cInvNoEnd.toUpperCase());
                 }
                 if (queryParams.cPartsIdn) {
-                    const partsIdn = queryParams.cPartsIdn.split(' ')[0].toUpperCase();
-                    filteredData = filteredData.filter(item => item.cPartsIdn === partsIdn);
+                    // 現在 cPartsIdn 已經是格式化後的版本
+                    filteredData = filteredData.filter(item => item.cPartsIdn.replace(/-/g, '') === queryParams.cPartsIdn);
                 }
                 
                 return filteredData;
@@ -164,7 +176,10 @@
                 queryParams.cInvNoBegin = document.getElementById('invNoBegin').value;
                 queryParams.cInvNoEnd = document.getElementById('invNoEnd').value;
             } else if (selectedQueryType === 'byPartNo') {
-                queryParams.cPartsIdn = document.getElementById('partsIdn').value;
+                const rawPartNo = document.getElementById('partsIdn').value;
+                queryParams.cPartsIdn = formatBarcode(rawPartNo);
+                // (可選) 將格式化後的值更新回輸入框
+                document.getElementById('partsIdn').value = queryParams.cPartsIdn;
             }
 
             // Basic validation to ensure at least one query method is used
@@ -321,7 +336,7 @@
                 }
                 
                 const targetEl = document.getElementById(targetInputId);
-                targetEl.value = decodedText.toUpperCase(); // Convert to uppercase
+                targetEl.value = formatBarcode(decodedText); // 使用新的格式化函式
                 
                 stopScan();
 
