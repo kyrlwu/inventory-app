@@ -148,7 +148,7 @@
             const isValid = await api.checkWarehouse(warehouseId);
             console.log('API check result:', isValid);
 
-            if (isValid) {
+            if (isValid === true) {
                 console.log('Warehouse is valid, updating UI');
                 inventoryDateEl.disabled = true;
                 warehouseIdEl.disabled = true;
@@ -309,9 +309,12 @@
             clearTimeout(messageTimeout); // Clear any existing timeout
 
             if (type === 'success' || type === 'info') {
+                dialogCloseBtn.classList.add('hidden'); // 隱藏按鈕
                 messageTimeout = setTimeout(() => {
                     dialogOverlay.classList.add('hidden');
-                }, 2000);
+                }, 500); // 縮短顯示時間
+            } else {
+                dialogCloseBtn.classList.remove('hidden'); // 顯示按鈕
             }
             // For 'error', no timeout is set, so it requires manual closing.
         }
