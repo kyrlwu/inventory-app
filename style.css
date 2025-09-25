@@ -424,3 +424,24 @@ td[data-label="本次盤點數"] {
 .query-type-selector input[type="radio"] {
     margin-right: 5px;
 }
+#network-status {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 10px;
+    text-align: center;
+    color: white;
+    font-weight: bold;
+    z-index: 1000;
+    transition: background-color 0.5s ease;
+}
+
+#network-status.online {
+    background-color: #28a745; /* Green */
+    display: none; /* Initially hidden when online */
+}
+
+#network-status.offline {
+    background-color: #dc3545; /* Red */
+}

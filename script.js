@@ -1,5 +1,64 @@
 (function() {
+    // --- Service Worker and Offline Support ---
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+                .then(registration => {
+                    console.log('Service Worker registered: ', registration);
+                })
+                .catch(registrationError => {
+                    console.log('Service Worker registration failed: ', registrationError);
+                });
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
+    // --- IndexedDB Setup ---
+    let db;
+    const dbRequest = indexedDB.open('inventoryDB', 1);
+
+    dbRequest.onupgradeneeded = (event) => {
+        db = event.target.result;
+        if (!db.objectStoreNames.contains('pendingSubmissions')) {
+            db.createObjectStore('pendingSubmissions', { autoIncrement: true });
+        }
+    };
+
+    dbRequest.onsuccess = (event) => {
+        db = event.target.result;
+        console.log('IndexedDB opened successfully.');
+    };
+
+    dbRequest.onerror = (event) => {
+        console.error('IndexedDB error:', event.target.errorCode);
+    };
+    // --- Network Status ---
+    const networkStatusEl = document.getElementById('network-status');
+
+    function updateNetworkStatus() {
+        if (navigator.onLine) {
+            networkStatusEl.textContent = '線上模式';
+            networkStatusEl.classList.remove('offline');
+            networkStatusEl.classList.add('online');
+            // Hide after a delay
+            setTimeout(() => {
+                networkStatusEl.style.display = 'none';
+            }, 2000);
+        } else {
+            networkStatusEl.textContent = '離線模式 - 資料將於連線後自動上傳';
+            networkStatusEl.classList.remove('online');
+            networkStatusEl.classList.add('offline');
+            networkStatusEl.style.display = 'block';
+        }
+    }
+
+    window.addEventListener('online', updateNetworkStatus);
+    window.addEventListener('offline', updateNetworkStatus);
+    
+    // Initial check
+    updateNetworkStatus();
+
+
         // DOM Elements
         const inventoryDateEl = document.getElementById('inventoryDate');
         const warehouseIdEl = document.getElementById('warehouseId');
@@ -84,7 +143,10 @@
 
         // --- Event Listeners ---
         checkDateAndWarehouseBtn.addEventListener('click', handleCheckDateAndWarehouse);
-        queryBtn.addEventListener('click', handleQuery);
+        queryBtn.addEventListener('click', () => {
+            const selectedQueryType = document.querySelector('input[name="queryType"]:checked').value;
+            handleQuery(selectedQueryType);
+        });
         confirmBtn.addEventListener('click', handleConfirm);
         document.getElementById('scanBarcode').addEventListener('click', () => handleScanBarcode('partsIdn'));
         document.getElementById('scanBinBegin').addEventListener('click', () => handleScanBarcode('binBegin'));
@@ -164,30 +226,30 @@
                 checkDateAndWarehouseBtn.disabled = false;
             }
         }
-
-        async function handleQuery() {
-            const selectedQueryType = document.querySelector('input[name="queryType"]:checked').value;
+        async function handleQuery(selectedQueryType, cParam1, cParam2) {
             const queryParams = {};
 
             if (selectedQueryType === 'byBin') {
-                queryParams.cBinBegin = document.getElementById('binBegin').value;
-                queryParams.cBinEnd = document.getElementById('binEnd').value;
+                queryParams.cBinBegin = cParam1 || document.getElementById('binBegin').value;
+                queryParams.cBinEnd = cParam2 || document.getElementById('binEnd').value;
                 if (!queryParams.cBinBegin || !queryParams.cBinEnd) {
                     showMessage('error', '請輸入完整的查詢條件');
                     return;
                 }
             } else if (selectedQueryType === 'byInvNo') {
-                queryParams.cInvNoBegin = document.getElementById('invNoBegin').value;
-                queryParams.cInvNoEnd = document.getElementById('invNoEnd').value;
+                queryParams.cInvNoBegin = cParam1 || document.getElementById('invNoBegin').value;
+                queryParams.cInvNoEnd = cParam2 || document.getElementById('invNoEnd').value;
                 if (!queryParams.cInvNoBegin || !queryParams.cInvNoEnd) {
                     showMessage('error', '請輸入完整的查詢條件');
                     return;
                 }
             } else if (selectedQueryType === 'byPartNo') {
-                const rawPartNo = document.getElementById('partsIdn').value;
+                const rawPartNo = cParam1 || document.getElementById('partsIdn').value;
                 queryParams.cPartsIdn = formatBarcode(rawPartNo);
                 // (可選) 將格式化後的值更新回輸入框
-                document.getElementById('partsIdn').value = queryParams.cPartsIdn;
+                if (!cParam1) { // Only update if not called with cParam1
+                    document.getElementById('partsIdn').value = queryParams.cPartsIdn;
+                }
             }
 
             // Basic validation to ensure at least one query method is used
@@ -277,25 +339,47 @@
             // 4. 打印調試信息並暫停實際的上傳操作
             console.log('待上傳的數據:', inventoryData);
 
-            // const submissionData = {
-            //     dInventoryDate: inventoryDateEl.value,
-            //     cWhIdn: warehouseIdEl.value,
-            //     inventoryData: inventoryData
-            // };
-            //
-            // const result = await api.submitInventory(submissionData);
-            //
-            // if (result.status) {
-            //     showMessage('success', result.message);
-            //     resetScreen();
-            // } else {
-            //     showMessage('error', result.message);
-            // }
+            if (inventoryData.length === 0) {
+                showMessage('info', '沒有需要提交的數據。');
+                confirmBtn.textContent = '確認';
+                confirmBtn.disabled = false;
+                return;
+            }
 
-            // 暫時直接顯示成功，因為我們跳過了上傳
-            // showMessage('info', '數據已在控制台打印，未執行上傳。');
-            // confirmBtn.textContent = '確認';
-            // confirmBtn.disabled = false;
+            const submissionData = {
+                dInventoryDate: inventoryDateEl.value,
+                cWhIdn: warehouseIdEl.value,
+                inventoryData: inventoryData
+            };
+
+            if (!db) {
+                showMessage('error', '資料庫未準備好，請稍後再試。');
+                confirmBtn.textContent = '確認';
+                confirmBtn.disabled = false;
+                return;
+            }
+
+            const transaction = db.transaction(['pendingSubmissions'], 'readwrite');
+            const store = transaction.objectStore('pendingSubmissions');
+            const request = store.add(submissionData);
+
+            request.onsuccess = () => {
+                showMessage('success', '資料已儲存於本地，將在連線時自動上傳。');
+                resetScreen();
+                // Register for a background sync
+                if ('serviceWorker' in navigator && 'SyncManager' in window) {
+                    navigator.serviceWorker.ready.then(function(sw) {
+                        return sw.sync.register('sync-inventory');
+                    });
+                }
+            };
+
+            request.onerror = (event) => {
+                showMessage('error', `儲存失敗: ${event.target.error}`);
+            };
+            
+            confirmBtn.textContent = '確認';
+            confirmBtn.disabled = false;
         }
         
         function showMessage(type, text) {
@@ -312,7 +396,7 @@
                 dialogCloseBtn.classList.add('hidden'); // 隱藏按鈕
                 messageTimeout = setTimeout(() => {
                     dialogOverlay.classList.add('hidden');
-                }, 500); // 縮短顯示時間
+                }, 1000); // 縮短顯示時間
             } else {
                 dialogCloseBtn.classList.remove('hidden'); // 顯示按鈕
             }
@@ -352,13 +436,13 @@
                 }
                 
                 const targetEl = document.getElementById(targetInputId);
-                targetEl.value = formatBarcode(decodedText); // 使用新的格式化函式
+                targetEl.value = formatBarcode(decodedText || ''); // 使用新的格式化函式
                 
                 stopScan();
 
                 // Automatically trigger query for partsIdn
                 if (targetInputId === 'partsIdn') {
-                    handleQuery();
+                    handleQuery('byPartNo', targetEl.value);
                 }
             };
 
